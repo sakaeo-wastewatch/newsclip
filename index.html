@@ -2,17 +2,112 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>คลิปข่าว | เฝ้ากาก สระแก้ว</title>
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://www.facebook.com">
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-    iframe { border: 0; width: 100%; height: 100%; display: block; }
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #faf6ee; font-family: system-ui, sans-serif; }
+    #app { border: 0; width: 100%; height: 100%; display: block; }
+
+    /* เครื่องเล่นคลิป Facebook (เล่นที่หน้านี้โดยตรง ไม่ซ้อนหลายชั้น) */
+    #fkp { position: fixed; inset: 0; z-index: 10; background: #000; display: none; flex-direction: column; }
+    #fkp.on { display: flex; }
+    #fkp .bar { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px; padding-top: max(10px, env(safe-area-inset-top)); background: #0b0f0d; color: #fff; }
+    #fkp .back { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 0; background: #fff; color: #0e3b2e; font: 600 15px system-ui, sans-serif; padding: 8px 14px 8px 10px; border-radius: 12px; cursor: pointer; }
+    #fkp .back svg { width: 18px; height: 18px; }
+    #fkp .ttl { flex: 1; min-width: 0; font-size: 14px; line-height: 1.3; color: #e6f2ea; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    #fkp .src { flex: none; font: 600 12px system-ui, sans-serif; padding: 3px 10px; border-radius: 8px; background: #1877f2; color: #fff; }
+    #fkp .stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding-bottom: env(safe-area-inset-bottom); }
+    #fkp iframe { position: relative; z-index: 1; display: block; border: 0; background: transparent; }
+    #fkp .load { position: absolute; inset: 0; z-index: 0; display: flex; align-items: center; justify-content: center; color: #9fb5ab; font-size: 14px; }
   </style>
 </head>
 <body>
-  <iframe
-    src="https://script.google.com/macros/s/AKfycbyrF0ScQhxUJkk-QLTxqwCmwqKGjBfV18XQE83CUi2OGrrEz0AWDWOaFv3lT4BRNUTy/exec"
-    allow="geolocation; camera; microphone; clipboard-write">
-  </iframe>
+  <iframe id="app"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture; clipboard-write; web-share"
+          allowfullscreen></iframe>
+
+  <div id="fkp" role="dialog" aria-modal="true">
+    <div class="bar">
+      <button class="back" type="button" aria-label="ปิด">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>ปิด
+      </button>
+      <div class="ttl"></div>
+      <span class="src">Facebook</span>
+    </div>
+    <div class="stage"><div class="load">กำลังโหลดคลิป…</div></div>
+  </div>
+
+  <script>
+    // วางลิงก์ /exec ของ Apps Script ระบบคลิปข่าว
+    const EXEC = 'https://script.google.com/macros/s/AKfycbyrF0ScQhxUJkk-QLTxqwCmwqKGjBfV18XQE83CUi2OGrrEz0AWDWOaFv3lT4BRNUTy/exec';
+    const SRC = EXEC + location.search;
+    document.getElementById('app').src = SRC;
+
+    // กดย้อนกลับมาแล้วเบราว์เซอร์คืนหน้าเดิมจากแคช → สร้างกรอบใหม่ (ไม่เพิ่มประวัติการย้อนกลับ)
+    window.addEventListener('pageshow', e => {
+      if (!e.persisted) return;
+      const old = document.getElementById('app');
+      const fresh = old.cloneNode(false);
+      fresh.src = SRC;
+      old.replaceWith(fresh);
+    });
+
+    /* ---------- เครื่องเล่นคลิป Facebook ---------- */
+    const box = document.getElementById('fkp');
+    const stage = box.querySelector('.stage');
+    let frame = null, ratio = 16 / 9;
+
+    function fit() {
+      const W = stage.clientWidth, H = stage.clientHeight;
+      let w = W, h = W / ratio;
+      if (h > H) { h = H; w = H * ratio; }
+      return { w: Math.max(200, Math.floor(w)), h: Math.max(120, Math.floor(h)) };
+    }
+    function sizeFrame() {
+      if (!frame) return;
+      const s = fit();
+      frame.style.width = s.w + 'px';
+      frame.style.height = s.h + 'px';
+    }
+    function closePlayer() {
+      box.classList.remove('on');
+      if (frame) { frame.remove(); frame = null; }
+      stage.innerHTML = '<div class="load">กำลังโหลดคลิป…</div>';
+    }
+    function openPlayer(href, title, vertical) {
+      ratio = vertical ? 9 / 16 : 16 / 9;
+      box.querySelector('.ttl').textContent = title || '';
+      box.classList.add('on');
+      requestAnimationFrame(() => {
+        const s = fit();
+        frame = document.createElement('iframe');
+        frame.setAttribute('allow', 'autoplay; encrypted-media; fullscreen; picture-in-picture; web-share; clipboard-write');
+        frame.setAttribute('allowfullscreen', '');
+        frame.setAttribute('scrolling', 'no');
+        frame.title = title || 'คลิป Facebook';
+        frame.src = 'https://www.facebook.com/plugins/video.php?href=' + encodeURIComponent(href) +
+                    '&show_text=false&allowfullscreen=true&width=' + s.w + '&height=' + s.h;
+        frame.addEventListener('load', () => { const l = stage.querySelector('.load'); if (l) l.remove(); });
+        stage.appendChild(frame);
+        sizeFrame();
+      });
+    }
+
+    box.querySelector('.back').addEventListener('click', closePlayer);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && box.classList.contains('on')) closePlayer(); });
+    window.addEventListener('resize', sizeFrame);
+
+    // รับคำสั่งจากระบบคลิปข่าว (Apps Script) เท่านั้น
+    window.addEventListener('message', e => {
+      const d = e.data;
+      if (!d || d.fk !== 'play') return;
+      if (!/\.googleusercontent\.com$|^https:\/\/script\.google\.com$/.test(e.origin)) return;
+      if (!/^https:\/\/([\w-]+\.)?(facebook\.com|fb\.watch)\//i.test(String(d.href || ''))) return;
+      openPlayer(String(d.href), String(d.title || '').slice(0, 200), !!d.vertical);
+      if (e.source) e.source.postMessage({ fk: 'ack', id: d.id }, '*');
+    });
+  </script>
 </body>
 </html>
