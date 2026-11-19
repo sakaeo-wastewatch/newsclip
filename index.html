@@ -42,6 +42,9 @@
   <script>
     // วางลิงก์ /exec ของ Apps Script ระบบคลิปข่าว
     const EXEC = 'https://script.google.com/macros/s/AKfycbyrF0ScQhxUJkk-QLTxqwCmwqKGjBfV18XQE83CUi2OGrrEz0AWDWOaFv3lT4BRNUTy/exec';
+    // ให้คลิป Facebook เริ่มเล่นเองเมื่อเปิด (ลดจำนวนครั้งที่ต้องแตะ)
+    // ถ้าเครื่องไหนกลับมาเป็นจอดำ ให้เปลี่ยนเป็น false
+    const FB_AUTOPLAY = true;
     const SRC = EXEC + location.search;
     document.getElementById('app').src = SRC;
 
@@ -88,7 +91,8 @@
         frame.setAttribute('scrolling', 'no');
         frame.title = title || 'คลิป Facebook';
         frame.src = 'https://www.facebook.com/plugins/video.php?href=' + encodeURIComponent(href) +
-                    '&show_text=false&allowfullscreen=true&width=' + s.w + '&height=' + s.h;
+                    '&show_text=false&allowfullscreen=true&autoplay=' + (FB_AUTOPLAY ? 'true' : 'false') +
+                    '&width=' + s.w + '&height=' + s.h;
         frame.addEventListener('load', () => { const l = stage.querySelector('.load'); if (l) l.remove(); });
         stage.appendChild(frame);
         sizeFrame();
